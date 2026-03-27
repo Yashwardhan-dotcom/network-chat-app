@@ -1,55 +1,33 @@
 import socket
 import threading
 
-# Server setup
-host = "0.0.0.0"
-port = 12345
+# Connect to server
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client.connect(("127.0.0.1", 12345))
 
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.bind((host, port))
-server.listen()
+name = input("Enter your name: ")
 
-clients = []
-names = []
-
-print("Server is running and listening...")
-
-# Send message to all clients
-def broadcast(message):
-    for client in clients:
-        client.send(message)
-
-# Handle each client
-def handle(client):
-    while True:
-        try:
-            message = client.recv(1024)
-            broadcast(message)
-        except:
-            index = clients.index(client)
-            clients.remove(client)
-            client.close()
-            name = names[index]
-            names.remove(name)
-            broadcast(f"{name} left the chat.".encode())
-            break
-
-# Accept new clients
+# Receive messages
 def receive():
     while True:
-        client, address = server.accept()
-        print(f"Connected with {str(address)}")
+        try:
+            message = client.recv(1024).decode()
+            if message == "NAME":
+                client.send(name.encode())
+            else:
+                print(message)
+        except:
+            print("Error! Disconnected.")
+            client.close()
+            break
 
-        client.send("NAME".encode())
-        name = client.recv(1024).decode()
+# Send messages
+def write():
+    while True:
+        msg = input("")
+        message = f"{name}: {msg}"
+        client.send(message.encode())
 
-        names.append(name)
-        clients.append(client)
-
-        print(f"Username: {name}")
-        broadcast(f"{name} joined the chat!".encode())
-
-        thread = threading.Thread(target=handle, args=(client,))
-        thread.start()
-
-receive()
+# Run threads
+threading.Thread(target=receive).start()
+threading.Thread(target=write).start()
